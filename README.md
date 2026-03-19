@@ -14,33 +14,17 @@ Use [task](https://taskfile.dev/) for building the application:
 ```sh
 task build:cli:release # to build CLI + library
 task build:lib:release # to build library alone
-```
-
-or manually:
-
-```sh
-# CLI + library
-cmake -S . -B ./build/directory \
-  -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DVDBSCAN_BUILD_CLI=ON \
-cmake --build ./build/directory --target vdbscan_cli -j
-
-# library only
-cmake -S . -B ./build/directory \
-  -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DVDBSCAN_BUILD_CLI=OFF \
-cmake --build ./build/directory --target vdbscan -j
+# for more options:
+task --list
 ```
 
 ## Roadmap
 
 - [x] Library core
 - [x] CLI
+- [x] Benchmarks
 - [ ] Unit tests
 - [ ] Fuzzing
-- [ ] Benchmarks
 - [ ] Perf traces
 
 ## License
