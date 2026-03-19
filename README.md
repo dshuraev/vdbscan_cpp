@@ -29,4 +29,4 @@ task --list
 
 ## License
 
-MIT. See [LICENSE](/mnt/archive/Work/Projects/vdbscan_cpp/LICENSE).
+MIT. See [LICENSE](./LICENSE).
