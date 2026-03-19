@@ -1,0 +1,125 @@
+version: 3
+
+vars:
+  TOOLCHAIN: '{{default "clang" .TOOLCHAIN}}'
+  BUILD_KIND: '{{default "cli" .BUILD_KIND}}'
+  BUILD_TYPE: '{{default "Release" .BUILD_TYPE}}'
+  CC_DEFAULT: '{{if eq .TOOLCHAIN "gcc"}}gcc{{else if eq .TOOLCHAIN "clang"}}clang{{end}}'
+  CXX_DEFAULT: '{{if eq .TOOLCHAIN "gcc"}}g++{{else if eq .TOOLCHAIN "clang"}}clang++{{end}}'
+  COMPILER_ENV: '{{if .CC_DEFAULT}}CC="${CC:-{{.CC_DEFAULT}}}" CXX="${CXX:-{{.CXX_DEFAULT}}}"{{end}}'
+  BUILD_TYPE_DIR:
+    sh: |
+      case "{{.BUILD_TYPE}}" in
+        Debug) echo debug ;;
+        Release) echo release ;;
+        *)
+          echo "unsupported BUILD_TYPE: {{.BUILD_TYPE}}" >&2
+          exit 1
+          ;;
+      esac
+  BUILD_DIR: build/{{.TOOLCHAIN}}-{{.BUILD_KIND}}-{{.BUILD_TYPE_DIR}}
+  BUILD_CLI:
+    sh: |
+      case "{{.BUILD_KIND}}" in
+        cli) echo ON ;;
+        lib) echo OFF ;;
+        *)
+          echo "unsupported BUILD_KIND: {{.BUILD_KIND}}" >&2
+          exit 1
+          ;;
+      esac
+
+tasks:
+  configure:
+    internal: true
+    cmds:
+      - >-
+        env
+        {{.COMPILER_ENV}}
+        cmake -S . -B {{.BUILD_DIR}}
+        -G Ninja
+        -DCMAKE_BUILD_TYPE={{.BUILD_TYPE}}
+        -DVDBSCAN_BUILD_CLI={{.BUILD_CLI}}
+
+  configure:lib:debug:
+    desc: Configure the library-only debug build
+    cmds:
+      - task: configure
+        vars:
+          BUILD_KIND: lib
+          BUILD_TYPE: Debug
+
+  configure:lib:release:
+    desc: Configure the library-only release build
+    cmds:
+      - task: configure
+        vars:
+          BUILD_KIND: lib
+          BUILD_TYPE: Release
+
+  configure:cli:debug:
+    desc: Configure the CLI + library debug build
+    cmds:
+      - task: configure
+        vars:
+          BUILD_KIND: cli
+          BUILD_TYPE: Debug
+
+  configure:cli:release:
+    desc: Configure the CLI + library release build
+    cmds:
+      - task: configure
+        vars:
+          BUILD_KIND: cli
+          BUILD_TYPE: Release
+
+  build:
+    internal: true
+    deps:
+      - task: configure
+        vars:
+          BUILD_KIND: '{{.BUILD_KIND}}'
+          BUILD_TYPE: '{{.BUILD_TYPE}}'
+          TOOLCHAIN: '{{.TOOLCHAIN}}'
+    cmds:
+      - >-
+        cmake --build {{.BUILD_DIR}}
+        --target {{if eq .BUILD_KIND "cli"}}vdbscan_cli{{else}}vdbscan{{end}}
+        -j
+
+  build:lib:release:
+    desc: Build release version of library
+    cmds:
+      - task: build
+        vars:
+          BUILD_KIND: lib
+          BUILD_TYPE: Release
+
+  build:lib:debug:
+    desc: Build debug version of library
+    cmds:
+      - task: build
+        vars:
+          BUILD_KIND: lib
+          BUILD_TYPE: Debug
+
+  build:cli:debug:
+    desc: Build CLI + library, both in debug mode
+    cmds:
+      - task: build
+        vars:
+          BUILD_KIND: cli
+          BUILD_TYPE: Debug
+
+  build:cli:release:
+    desc: Build CLI + library, both in release mode
+    cmds:
+      - task: build
+        vars:
+          BUILD_KIND: cli
+          BUILD_TYPE: Release
+
+  clean:
+    desc: Remove all generated build directories
+    cmds:
+      - rm -rf build/clang-* build/gcc-* build/msvc-*
