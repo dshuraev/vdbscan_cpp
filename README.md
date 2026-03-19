@@ -42,3 +42,7 @@ cmake --build ./build/directory --target vdbscan -j
 - [ ] Fuzzing
 - [ ] Benchmarks
 - [ ] Perf traces
+
+## License
+
+MIT. See [LICENSE](/mnt/archive/Work/Projects/vdbscan_cpp/LICENSE).
