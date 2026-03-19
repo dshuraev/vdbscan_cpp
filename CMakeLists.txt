@@ -9,6 +9,7 @@ add_subdirectory(lib)
 
 option(VDBSCAN_BUILD_CLI "Build the CLI executable" ON)
 option(VDBSCAN_BENCHMARK_KITTI "Build the KITTI benchmark scaffold" OFF)
+option(VDBSCAN_TEST "Build the unit-test suite (requires Catch2 via FetchContent)" OFF)
 
 if(VDBSCAN_BUILD_CLI)
     add_subdirectory(cli)
@@ -16,4 +17,9 @@ endif()
 
 if(VDBSCAN_BENCHMARK_KITTI)
     add_subdirectory(benches/kitti)
+endif()
+
+if(VDBSCAN_TEST)
+    enable_testing()
+    add_subdirectory(test)
 endif()

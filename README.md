@@ -6,6 +6,7 @@ General-purpose DBSCAN point-cloud clustering accelerated by Morton-order voxel 
 
 - `CMake >= 3.20`
 - C++ compiler supporting C++17
+- `gcovr` for `test:coverage`
 
 ## Building
 
@@ -23,7 +24,7 @@ task --list
 - [x] Library core
 - [x] CLI
 - [x] Benchmarks
-- [ ] Unit tests
+- [x] Unit tests
 - [ ] Fuzzing
 - [ ] Perf traces
 

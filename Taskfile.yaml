@@ -42,6 +42,62 @@ tasks:
         -DSTRIDE={{.KITTI_STRIDE}}
       - cmake --build build/{{.TOOLCHAIN}}-bench-kitti-release --target vdbscan_bench_kitti -j
 
+  # ── Tests ──────────────────────────────────────────────────────────────────
+  # TOOLCHAIN controls both the compiler and the gcov tool:
+  #   clang  → clang++ / llvm-cov gcov   (default)
+  #   gcc    → g++     / gcov
+
+  test:run:
+    desc: Build and run unit tests (Debug, no coverage)
+    vars:
+      CXX: '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
+      CC:  '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
+    cmds:
+      - >-
+        cmake -S . -B build/{{.TOOLCHAIN}}-test -G Ninja
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_CXX_COMPILER={{.CXX}}
+        -DCMAKE_C_COMPILER={{.CC}}
+        -DVDBSCAN_BUILD_CLI=OFF
+        -DVDBSCAN_TEST=ON
+      - cmake --build build/{{.TOOLCHAIN}}-test --target vdbscan_tests -j
+      - cd build/{{.TOOLCHAIN}}-test && ctest --output-on-failure
+
+  # Generates line and branch coverage HTML + text summary under
+  # build/<toolchain>-test-coverage/coverage/.
+  # Requires gcovr (pip install gcovr).
+  # For TOOLCHAIN=clang, llvm-cov must be on PATH.
+
+  test:coverage:
+    desc: Build and run tests with line+branch coverage reports
+    vars:
+      CXX:       '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
+      CC:        '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
+      GCOV_EXEC: '{{if eq .TOOLCHAIN "clang"}}llvm-cov gcov{{else}}gcov{{end}}'
+      COV_DIR:   build/{{.TOOLCHAIN}}-test-coverage
+    cmds:
+      - >-
+        cmake -S . -B {{.COV_DIR}} -G Ninja
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_CXX_COMPILER={{.CXX}}
+        -DCMAKE_C_COMPILER={{.CC}}
+        -DVDBSCAN_BUILD_CLI=OFF
+        -DVDBSCAN_TEST=ON
+        -DVDBSCAN_COVERAGE=ON
+      - cmake --build {{.COV_DIR}} --target vdbscan_tests -j
+      - cd {{.COV_DIR}} && ctest --output-on-failure
+      - mkdir -p {{.COV_DIR}}/coverage
+      - >-
+        gcovr
+        --root .
+        --filter 'lib/'
+        --gcov-executable '{{.GCOV_EXEC}}'
+        --html-details {{.COV_DIR}}/coverage/index.html
+        --txt {{.COV_DIR}}/coverage/summary.txt
+        --txt-metric branch
+        --print-summary
+        {{.COV_DIR}}
+
   # ── Utilities ──────────────────────────────────────────────────────────────
 
   clean:
