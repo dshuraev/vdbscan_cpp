@@ -27,6 +27,9 @@ if(MAX_FILES LESS 0)
     message(FATAL_ERROR "MAX_FILES must be >= 0")
 endif()
 
+set(EPSILON "" CACHE STRING "Override benchmark epsilon (integer, centimetres); if both EPSILON and MINPTS are set, only that single arg-set is benchmarked")
+set(MINPTS "" CACHE STRING "Override benchmark min_pts; if both EPSILON and MINPTS are set, only that single arg-set is benchmarked")
+
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Disable google benchmark tests" FORCE)
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable google benchmark gtest integration" FORCE)
 set(BENCHMARK_DOWNLOAD_DEPENDENCIES ON CACHE BOOL "Allow google benchmark dependency downloads" FORCE)
@@ -54,6 +57,14 @@ target_compile_definitions(vdbscan_bench_kitti PRIVATE
     KITTI_MAX_FILES=${MAX_FILES}
     KITTI_STRIDE=${STRIDE}
 )
+
+if(EPSILON AND MINPTS)
+    target_compile_definitions(vdbscan_bench_kitti PRIVATE
+        KITTI_EPSILON=${EPSILON}
+        KITTI_MINPTS=${MINPTS}
+    )
+    message(STATUS "KITTI benchmark: single arg-set override (epsilon=${EPSILON}, min_pts=${MINPTS})")
+endif()
 
 message(STATUS
     "KITTI benchmark configured from ${KITTI_DATASET_PATH} "

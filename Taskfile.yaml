@@ -67,6 +67,7 @@ tasks:
     desc: >-
       Build and run the KITTI benchmark with Tracy instrumentation enabled.
       Requires KITTI_PATH=<path>. Optional: KITTI_STRIDE, KITTI_MAX_FILES.
+      If both EPSILON and MINPTS are set, then it only runs the trace with these parameters.
       Start the Tracy profiler (tracy-profiler or tracy-capture) before running,
       then hit Connect.
     requires:
@@ -83,6 +84,8 @@ tasks:
         -DKITTI_DATASET_PATH={{.KITTI_PATH}}
         -DMAX_FILES={{.KITTI_MAX_FILES}}
         -DSTRIDE={{.KITTI_STRIDE}}
+        -DEPSILON={{.EPSILON}}
+        -DMINPTS={{.MINPTS}}
       - cmake --build {{.TRACY_DIR}} --target vdbscan_bench_kitti -j
       - '{{.TRACY_DIR}}/benches/kitti/vdbscan_bench_kitti --benchmark_min_time=10s'
 
@@ -214,13 +217,13 @@ tasks:
       - cmake --build {{.CAPTURE_DIR}} -j
       - echo "tracy-capture built at {{.CAPTURE_DIR}}/tracy-capture"
 
-  tool:tracy:
+  tracy:
     desc: Run tracy-capture (run this before bench:kitti:tracy)
     vars:
       ADDR: 127.0.0.1
       SHA:
         sh: git rev-parse --short=8 HEAD
-      TRACE: ./build/{{.SHA}}.trace
+      TRACE: ./build/{{.SHA}}
     deps: [build:tracy:capture]
     cmds:
-      - '{{.OUT_DIR}}/tracy-capture/tracy-capture -a {{.ADDR}} -o {{.TRACE}}' 
+      - '{{.OUT_DIR}}/tracy-capture/tracy-capture -a {{.ADDR}} -o {{.TRACE}}{{.CLI_ARGS}}.trace' 

@@ -136,4 +136,8 @@ void BM_DBSCAN_KITTI(benchmark::State &state) {
 
 } // namespace
 
+#if defined(KITTI_EPSILON) && defined(KITTI_MINPTS)
+BENCHMARK(BM_DBSCAN_KITTI)->Args({KITTI_EPSILON, KITTI_MINPTS});
+#else
 BENCHMARK(BM_DBSCAN_KITTI)->Args({50, 4})->Args({75, 4})->Args({100, 4});
+#endif
