@@ -48,7 +48,7 @@ inline constexpr std::size_t INVALID_SPAN =
 /// point regardless of dataset size.
 class Index {
 public:
-  PointCloud sorted_cloud;                      ///< Points reordered by Morton code.
+  vdbscan::PointCloud sorted_cloud;             ///< Points reordered by Morton code.
   std::vector<VoxelSpan> voxel_spans;           ///< All occupied voxels in Morton order.
   std::vector<NeighborList> voxel_neighbor_lut; ///< 27-entry neighbor table per voxel.
   std::vector<std::size_t> point_to_voxel;      ///< Maps sorted-point index → voxel index.
@@ -56,7 +56,7 @@ public:
   /// Builds the spatial index from \p cloud using \p epsilon as the voxel
   /// side length.
   /// \pre \p epsilon > 0.
-  Index(const PointCloud &cloud, float epsilon);
+  Index(const vdbscan::PointCloud &cloud, float epsilon);
 
   /// Returns \c true if the Euclidean distance between sorted-cloud points
   /// \p a and \p b is at most \c sqrt(eps_squared).

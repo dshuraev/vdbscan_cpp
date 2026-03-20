@@ -17,6 +17,8 @@
 
 namespace fs = std::filesystem;
 
+using namespace vdbscan;
+
 namespace {
 
 using Rgb = std::array<std::uint8_t, 3>;

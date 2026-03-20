@@ -11,6 +11,8 @@
 
 namespace fs = std::filesystem;
 
+using namespace vdbscan;
+
 int main(int argc, char *argv[]) {
   CLI::App app{"Cluster point clouds with voxel-accelerated DBSCAN."};
   app.set_help_all_flag("--help-all", "Show all help, including hidden details.");

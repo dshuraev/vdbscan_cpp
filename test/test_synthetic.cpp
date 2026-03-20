@@ -30,6 +30,8 @@
 
 #include <vdbscan/vdbscan.hpp>
 
+using namespace vdbscan;
+
 namespace fs = std::filesystem;
 
 // ─────────────────────────────────────────────────────────────────────────────

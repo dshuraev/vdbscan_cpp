@@ -24,6 +24,8 @@ void validate_lengths(const std::size_t x_len, const std::size_t y_len,
 
 } // namespace
 
+namespace vdbscan {
+
 PointCloud::PointCloud(const std::size_t capacity) {
   vx.reserve(capacity);
   vy.reserve(capacity);
@@ -150,3 +152,5 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
   } // dbscan/BFS
   return Clustering(std::move(cloud_index.sorted_cloud), std::move(labels));
 }
+
+} // namespace vdbscan

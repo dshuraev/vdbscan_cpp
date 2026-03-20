@@ -5,6 +5,8 @@
 #include <initializer_list>
 #include <vector>
 
+namespace vdbscan {
+
 /// A 3-D point cloud stored in Structure-of-Arrays (SoA) layout.
 ///
 /// Keeping X, Y, and Z coordinates in separate contiguous vectors enables
@@ -71,3 +73,5 @@ public:
 ///                 \c labels assign each point to a cluster (≥ 1) or noise (0).
 [[nodiscard]] Clustering dbscan(const PointCloud &cloud, float epsilon,
                                 uint_fast16_t min_pts);
+
+} // namespace vdbscan

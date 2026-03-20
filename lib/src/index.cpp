@@ -253,7 +253,9 @@ build_voxel_neighbor_lut(const std::vector<VoxelSpan> &spans) {
 }
 } // namespace
 
-Index::Index(const PointCloud &cloud, float epsilon) {
+using vdbscan::PointCloud;
+
+Index::Index(const vdbscan::PointCloud &cloud, float epsilon) {
   assert(epsilon > 0.0);
   const auto len = cloud.length();
 

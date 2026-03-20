@@ -32,6 +32,8 @@
 
 namespace fs = std::filesystem;
 
+using namespace vdbscan;
+
 namespace {
 
 constexpr std::size_t kStride = static_cast<std::size_t>(KITTI_STRIDE);
