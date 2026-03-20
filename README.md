@@ -8,6 +8,7 @@ General-purpose DBSCAN point-cloud clustering accelerated by Morton-order voxel 
 - C++ compiler supporting C++17
 - [`uv`](https://docs.astral.sh/uv/) for `test:all:run` and synthetic targets.
 - `gcov` or `llvm-cov gcov` for `test:coverage` depending on toolchain
+- [`cargo-flamegraph`](https://github.com/flamegraph-rs/flamegraph), `perf` for `perf:flamegraph:kitti` target
 
 ## Building
 
@@ -28,7 +29,8 @@ task --list
 - [x] Unit tests
 - [x] Testing on synthetic data (oracle [sklearn.cluster.DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html))
 - [ ] Fuzzing
-- [ ] Perf traces
+- [x] Perf traces
+- [ ] Tracy
 
 ## License
 

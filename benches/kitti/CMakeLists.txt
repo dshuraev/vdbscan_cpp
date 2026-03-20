@@ -48,6 +48,7 @@ target_link_libraries(vdbscan_bench_kitti PRIVATE
 )
 
 target_compile_features(vdbscan_bench_kitti PRIVATE cxx_std_17)
+target_compile_options(vdbscan_bench_kitti PRIVATE -g)
 target_compile_definitions(vdbscan_bench_kitti PRIVATE
     KITTI_DATASET_PATH="${KITTI_DATASET_PATH}"
     KITTI_MAX_FILES=${MAX_FILES}

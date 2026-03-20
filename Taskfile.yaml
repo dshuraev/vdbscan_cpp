@@ -1,13 +1,19 @@
 version: 3
 
+dotenv:
+  - '.env'
+
 vars:
-  TOOLCHAIN:     '{{default "clang" .TOOLCHAIN}}'
-  CXX:           '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
-  CC:            '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
-  GCOV_EXEC:     '{{if eq .TOOLCHAIN "clang"}}llvm-cov gcov{{else}}gcov{{end}}'
-  COV_DIR:       build/{{.TOOLCHAIN}}-test-coverage
-  KITTI_STRIDE:  '{{default "1" .KITTI_STRIDE}}'
-  SYNTHETIC_DIR: ./.cache/synthetic-data
+  TOOLCHAIN:        '{{default "clang" .TOOLCHAIN}}'
+  CXX:              '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
+  CC:               '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
+  GCOV_EXEC:        '{{if eq .TOOLCHAIN "clang"}}llvm-cov gcov{{else}}gcov{{end}}'
+  OUT_DIR:          './build/{{.TOOLCHAIN}}'
+  COV_DIR:          'build/{{.TOOLCHAIN}}-test-coverage'
+  KITTI_STRIDE:     '{{default "1" .KITTI_STRIDE}}'
+  KITTI_MAX_FILES:  '{{default "0" .KITTI_MAX_FILES}}'
+  SYNTHETIC_DIR:    './.cache/synthetic-data'
+
 
 tasks:
   # ── Library ────────────────────────────────────────────────────────────────
@@ -15,61 +21,94 @@ tasks:
   build:lib:release:
     desc: Build the library (Release)
     cmds:
-      - cmake -S . -B build/{{.TOOLCHAIN}}-lib-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DVDBSCAN_BUILD_CLI=OFF
-      - cmake --build build/{{.TOOLCHAIN}}-lib-release --target vdbscan -j
+      - cmake -S . -B {{.OUT_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Release -DVDBSCAN_BUILD_CLI=OFF
+      - cmake --build {{.OUT_DIR}} --target vdbscan -j
 
   # ── CLI ────────────────────────────────────────────────────────────────────
 
   build:cli:release:
     desc: Build the CLI + library (Release)
     cmds:
-      - cmake -S . -B build/{{.TOOLCHAIN}}-cli-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DVDBSCAN_BUILD_CLI=ON
-      - cmake --build build/{{.TOOLCHAIN}}-cli-release --target vdbscan_cli -j
+      - cmake -S . -B {{.OUT_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Release -DVDBSCAN_BUILD_CLI=ON
+      - cmake --build {{.OUT_DIR}} --target vdbscan_cli -j
 
   # ── KITTI benchmark ────────────────────────────────────────────────────────
   # Usage: task build:bench:kitti:release KITTI_PATH=/data/kitti/velodyne
 
-  build:bench:kitti:release:
-    desc: Build the KITTI benchmark (Release). Requires KITTI_PATH=<path>
+  perf:flamegraph:kitti:
+    desc: >-
+      Record perf trace over the KITTI benchmark and generate a flamegraph SVG.
+      Requires KITTI_PATH=<path>. Optional: KITTI_STRIDE, KITTI_MAX_FILES.
+      Requires flamegraph (from cargo-flamegraph) on PATH.
     requires:
       vars: [KITTI_PATH]
     vars:
-      KITTI_MAX_FILES: '{{default "0" .KITTI_MAX_FILES}}'
+      BENCH_FILTER:    '{{default "" .BENCH_FILTER}}'
+      SVG:             build/{{.TOOLCHAIN}}-flamegraph-kitti.svg
     cmds:
       - >-
-        cmake -S . -B build/{{.TOOLCHAIN}}-bench-kitti-release -G Ninja
+        cmake -S . -B {{.OUT_DIR}} -G Ninja
         -DCMAKE_BUILD_TYPE=Release
         -DVDBSCAN_BUILD_CLI=OFF
         -DVDBSCAN_BENCHMARK_KITTI=ON
         -DKITTI_DATASET_PATH={{.KITTI_PATH}}
         -DMAX_FILES={{.KITTI_MAX_FILES}}
         -DSTRIDE={{.KITTI_STRIDE}}
-      - cmake --build build/{{.TOOLCHAIN}}-bench-kitti-release --target vdbscan_bench_kitti -j
+      - cmake --build {{.OUT_DIR}} --target vdbscan_bench_kitti -j
+      - defer: rm -f perf.data perf.data.old
+      - >-
+        flamegraph -o {{.SVG}}
+        -- {{.OUT_DIR}}/benches/kitti/vdbscan_bench_kitti
+        {{if .BENCH_FILTER}}--benchmark_filter={{.BENCH_FILTER}}{{end}}
+        --benchmark_min_time=5s
+      - echo "Flamegraph written to {{.SVG}}"
 
+  build:bench:kitti:
+    desc: |
+      Build the KITTI benchmark (Release).
+      Requires KITTI_PATH=<path>. Optional: KITTI_STRIDE, KITTI_MAX_FILES
+    requires:
+      vars: [KITTI_PATH]
+    cmds:
+      - >-
+        cmake -S . -B {{.OUT_DIR}} -G Ninja
+        -DCMAKE_BUILD_TYPE=Release
+        -DVDBSCAN_BUILD_CLI=OFF
+        -DVDBSCAN_BENCHMARK_KITTI=ON
+        -DKITTI_DATASET_PATH={{.KITTI_PATH}}
+        -DMAX_FILES={{.KITTI_MAX_FILES}}
+        -DSTRIDE={{.KITTI_STRIDE}}
+      - cmake --build {{.OUT_DIR}} --target vdbscan_bench_kitti -j
+
+  bench:kitti:run:
+    desc: Run KITTI benchmark
+    deps: [build:bench:kitti]
+    cmds:
+      - '{{.OUT_DIR}}/benches/kitti/vdbscan_bench_kitti'
   # ── Tests ──────────────────────────────────────────────────────────────────
   # TOOLCHAIN controls both the compiler and the gcov tool:
   #   clang  → clang++ / llvm-cov gcov   (default)
   #   gcc    → g++     / gcov
 
-  test:run:
+  test:unit:run:
     desc: Build and run unit tests (Debug, no coverage)
     cmds:
       - >-
-        cmake -S . -B build/{{.TOOLCHAIN}}-test -G Ninja
+        cmake -S . -B {{.OUT_DIR}}/test -G Ninja
         -DCMAKE_BUILD_TYPE=Debug
         -DCMAKE_CXX_COMPILER={{.CXX}}
         -DCMAKE_C_COMPILER={{.CC}}
         -DVDBSCAN_BUILD_CLI=OFF
         -DVDBSCAN_TEST=ON
-      - cmake --build build/{{.TOOLCHAIN}}-test --target vdbscan_tests -j
-      - cd build/{{.TOOLCHAIN}}-test && ctest --output-on-failure
+      - cmake --build build/{{.TOOLCHAIN}}/test --target vdbscan_tests -j
+      - cd build/{{.TOOLCHAIN}}/test && ctest --output-on-failure
 
   test:synthetic:run:
     desc: Generate synthetic data (if needed) then run integration tests against it
     deps: [gen:synthetic]
     cmds:
       - >-
-        cmake -S . -B build/{{.TOOLCHAIN}}-synth-test -G Ninja
+        cmake -S . -B {{.OUT_DIR}}/synth-test -G Ninja
         -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_CXX_COMPILER={{.CXX}}
         -DCMAKE_C_COMPILER={{.CC}}
@@ -77,12 +116,12 @@ tasks:
         -DVDBSCAN_TEST=ON
         -DVDBSCAN_TEST_SYNTHETIC=ON
         -DSYNTHETIC_DIR={{.SYNTHETIC_DIR}}
-      - cmake --build build/{{.TOOLCHAIN}}-synth-test -j
-      - cd build/{{.TOOLCHAIN}}-synth-test && ctest --output-on-failure -R "Synthetic PLY"
+      - cmake --build {{.OUT_DIR}}/synth-test -j
+      - cd build/{{.TOOLCHAIN}}/synth-test && ctest --output-on-failure -R "Synthetic PLY"
 
   test:all:run:
     desc: Build and run all tests — unit (Debug) and synthetic integration (Release)
-    deps: [test:run, test:synthetic:run]
+    deps: [test:unit:run, test:synthetic:run]
 
   # Generates line and branch coverage HTML + text summary under
   # build/<toolchain>-test-coverage/coverage/.
