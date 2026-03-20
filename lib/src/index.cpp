@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "index.hpp"
+#include "tracy_fwd.hpp"
 
 namespace {
 
@@ -271,33 +272,49 @@ Index::Index(const PointCloud &cloud, float epsilon) {
   auto qx = std::vector<int32_t>(len);
   auto qy = std::vector<int32_t>(len);
   auto qz = std::vector<int32_t>(len);
-
-  quantize_axis(cloud.vx.data(), qx.data(), len, inv);
-  quantize_axis(cloud.vy.data(), qy.data(), len, inv);
-  quantize_axis(cloud.vz.data(), qz.data(), len, inv);
+  {
+    ZoneScopedN("Index/Quantize");
+    quantize_axis(cloud.vx.data(), qx.data(), len, inv);
+    quantize_axis(cloud.vy.data(), qy.data(), len, inv);
+    quantize_axis(cloud.vz.data(), qz.data(), len, inv);
+  }
 
   // Step 2: Morton-encode every point's voxel coordinates.
   auto morton_refs = std::vector<MortonRef>(len);
-  morton_encode(qx.data(), qy.data(), qz.data(), morton_refs.data(), len);
+  {
+    ZoneScopedN("Index/MortonEncode");
+    morton_encode(qx.data(), qy.data(), qz.data(), morton_refs.data(), len);
+  }
 
   // Step 3: Sort by Z-order code; scatter original points into sorted_cloud.
-  radix_sort_morton_refs(morton_refs);
+  {
+    ZoneScopedN("Index/RadixSort");
+    radix_sort_morton_refs(morton_refs);
+  }
 
   sorted_cloud = PointCloud();
   sorted_cloud.vx.resize(len);
   sorted_cloud.vy.resize(len);
   sorted_cloud.vz.resize(len);
-
-  for (std::size_t i = 0; i < len; ++i) {
-    const auto point_idx = morton_refs[i].index;
-    sorted_cloud.vx[i] = cloud.vx[point_idx];
-    sorted_cloud.vy[i] = cloud.vy[point_idx];
-    sorted_cloud.vz[i] = cloud.vz[point_idx];
+  {
+    ZoneScopedN("Index/Scatter");
+    for (std::size_t i = 0; i < len; ++i) {
+      const auto point_idx = morton_refs[i].index;
+      sorted_cloud.vx[i] = cloud.vx[point_idx];
+      sorted_cloud.vy[i] = cloud.vy[point_idx];
+      sorted_cloud.vz[i] = cloud.vz[point_idx];
+    }
   }
 
   // Step 4: Run-length encode sorted Morton codes into voxel spans.
-  voxel_spans = build_voxel_spans(morton_refs, point_to_voxel);
+  {
+    ZoneScopedN("Index/BuildSpans");
+    voxel_spans = build_voxel_spans(morton_refs, point_to_voxel);
+  }
 
   // Step 5: Precompute the 3x3x3 voxel neighborhood for every span.
-  voxel_neighbor_lut = build_voxel_neighbor_lut(voxel_spans);
+  {
+    ZoneScopedN("Index/BuildLUT");
+    voxel_neighbor_lut = build_voxel_neighbor_lut(voxel_spans);
+  }
 }

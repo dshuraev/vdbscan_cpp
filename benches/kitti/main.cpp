@@ -1,5 +1,11 @@
 #include <benchmark/benchmark.h>
 
+#ifdef TRACY_ENABLE
+#  include <tracy/Tracy.hpp>
+#else
+#  define FrameMark
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -118,6 +124,7 @@ void BM_DBSCAN_KITTI(benchmark::State &state) {
       const Clustering clustering = dbscan(scan.cloud, epsilon, min_pts);
       benchmark::DoNotOptimize(clustering.labels.data());
       benchmark::DoNotOptimize(clustering.cloud.length());
+      FrameMark;
     }
   }
 

@@ -30,7 +30,7 @@ task --list
 - [x] Testing on synthetic data (oracle [sklearn.cluster.DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html))
 - [ ] Fuzzing
 - [x] Perf traces
-- [ ] Tracy
+- [x] Tracy
 
 ## License
 

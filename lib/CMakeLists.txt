@@ -34,6 +34,20 @@ target_link_libraries(vdbscan PRIVATE
     libmorton::libmorton
 )
 
+option(VDBSCAN_TRACY "Enable Tracy profiler instrumentation" OFF)
+
+if(VDBSCAN_TRACY)
+    FetchContent_Declare(
+        tracy
+        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+        GIT_TAG v0.11.1
+        GIT_SHALLOW TRUE
+    )
+    set(TRACY_NO_EXIT ON CACHE BOOL "Tracy: wait for profiler connection on exit" FORCE)
+    FetchContent_MakeAvailable(tracy)
+    target_link_libraries(vdbscan PUBLIC TracyClient)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(vdbscan PRIVATE
         $<$<CONFIG:Release>:-O3>

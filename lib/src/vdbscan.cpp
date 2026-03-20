@@ -9,6 +9,7 @@
 #include <vdbscan/vdbscan.hpp>
 
 #include "index.hpp"
+#include "tracy_fwd.hpp"
 
 namespace {
 
@@ -54,6 +55,7 @@ Clustering::Clustering(PointCloud sorted_cloud, std::vector<size_t> labels)
 
 Clustering dbscan(const PointCloud &cloud, float epsilon,
                   uint_fast16_t min_pts) {
+  ZoneScoped;
   assert(epsilon > 0);
   auto eps2 = epsilon * epsilon;
   auto cloud_index = Index(cloud, epsilon);
@@ -66,6 +68,8 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
   // met, avoiding unnecessary distance checks.
   auto is_core = std::vector<uint_fast8_t>(cloud_index.sorted_cloud.length());
 
+  {
+  ZoneScopedN("dbscan/CoreDetect");
   for (size_t i = 0; i < cloud_index.sorted_cloud.length(); i++) {
     uint_fast16_t neighbors_in_range = 0;
     size_t voxel_idx = cloud_index.point_to_voxel[i];
@@ -95,6 +99,7 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
       is_core[i] = 1;
     }
   }
+  } // dbscan/CoreDetect
 
   // Phase 2: BFS cluster expansion from each unvisited core point.
   //
@@ -107,6 +112,8 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
   auto labels = std::vector<size_t>(cloud_index.sorted_cloud.length());
   size_t cluster_label = 1; // Labels start at 1; 0 is reserved for noise.
 
+  {
+  ZoneScopedN("dbscan/BFS");
   for (size_t i = 0; i < cloud_index.sorted_cloud.length(); i++) {
     if (!is_core[i] || visited[i]) {
       continue;
@@ -140,5 +147,6 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
     }
     cluster_label += 1;
   }
+  } // dbscan/BFS
   return Clustering(std::move(cloud_index.sorted_cloud), std::move(labels));
 }
