@@ -183,6 +183,7 @@ tasks:
 
   gen:synthetic:
     desc: Generate synthetic point cloud data
+    internal: true
     vars:
       CONFIGS:
         sh: find ./scripts/config/synthetic_data -type f -name '*.json'
@@ -218,7 +219,10 @@ tasks:
       - echo "tracy-capture built at {{.CAPTURE_DIR}}/tracy-capture"
 
   tracy:
-    desc: Run tracy-capture (run this before bench:kitti:tracy)
+    desc: >-
+      Run tracy-capture (run this before bench:kitti:tracy).
+      Arguments passed after -- will be interpreted as trace suffix.
+      E.g. task tracy -- _eps=50_minpts=4 -> <sha>_eps=50_minpts=4.trace
     vars:
       ADDR: 127.0.0.1
       SHA:

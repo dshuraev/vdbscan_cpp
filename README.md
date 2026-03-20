@@ -92,6 +92,7 @@ Dependencies (Boost headers, libmorton, Catch2, CLI11, Google Benchmark, Tracy) 
 task build:cli:release   # CLI executable + library (recommended)
 task build:lib:release   # Library only
 
+task clean               # Remove all build artifacts and .cache/
 task --list              # Full list of available targets
 ```
 
@@ -192,13 +193,32 @@ Integration tests generate synthetic point clouds (Gaussian blobs, toroids, cres
 ```sh
 task build:bench:kitti KITTI_PATH=/path/to/kitti/velodyne
 task bench:kitti:run
+```
 
-# Flamegraph (requires cargo-flamegraph + perf)
+**Flamegraph** (requires `cargo-flamegraph` + `perf`):
+
+```sh
 task perf:flamegraph:kitti KITTI_PATH=/path/to/kitti/velodyne
 
-# Tracy real-time profiler
-task bench:kitti:tracy KITTI_PATH=/path/to/kitti/velodyne
+# Optional: restrict to a specific benchmark case
+task perf:flamegraph:kitti KITTI_PATH=/path/to/kitti/velodyne BENCH_FILTER=<regex>
 ```
+
+**Tracy real-time profiler** — capture a trace:
+
+```sh
+# Step 1: start the capture process (writes a .trace file named after the current git SHA)
+task tracy
+
+# Step 2: in another terminal, run the benchmark (connect to the waiting capture)
+task bench:kitti:tracy KITTI_PATH=/path/to/kitti/velodyne
+
+# Optional: profile only a single epsilon/min_pts combination
+task bench:kitti:tracy KITTI_PATH=/path/to/kitti/velodyne EPSILON=0.5 MINPTS=8
+```
+
+`task build:tracy:capture` compiles the bundled `tracy-capture` binary from the Tracy v0.11.1
+sources fetched by CMake; run it once if `tracy-capture` is not already on `PATH`.
 
 ## Performance
 
