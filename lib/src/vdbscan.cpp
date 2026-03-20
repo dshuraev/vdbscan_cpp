@@ -130,6 +130,8 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
       size_t voxel_idx = cloud_index.point_to_voxel[point_index];
       const NeighborList &neighbors =
           cloud_index.voxel_neighbor_lut[voxel_idx];
+      {
+      ZoneScopedN("dbscan/BFS/SpanScan");
       for (size_t span_idx : neighbors) {
         if (span_idx == INVALID_SPAN) {
           continue;
@@ -146,6 +148,7 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
           }
         }
       }
+      } // dbscan/BFS/SpanScan
     }
     cluster_label += 1;
   }
