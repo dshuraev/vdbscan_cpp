@@ -125,6 +125,7 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
     visited[i] = 1;
     labels[i] = cluster_label;
     while (!queue.empty()) {
+      // Get core point from queue, lookup voxel neighbors
       const size_t point_index = queue.front();
       queue.pop_front();
       size_t voxel_idx = cloud_index.point_to_voxel[point_index];
@@ -132,14 +133,40 @@ Clustering dbscan(const PointCloud &cloud, float epsilon,
           cloud_index.voxel_neighbor_lut[voxel_idx];
       {
       ZoneScopedN("dbscan/BFS/SpanScan");
-      for (size_t span_idx : neighbors) {
+      const VoxelSpan &qvoxel = cloud_index.voxel_spans[voxel_idx];
+      const float qx = cloud_index.sorted_cloud.vx[point_index];
+      const float qy = cloud_index.sorted_cloud.vy[point_index];
+      const float qz = cloud_index.sorted_cloud.vz[point_index];
+      const float cell = cloud_index.voxel_size;
+      const float rx = qx - qvoxel.x * cell;
+      const float ry = qy - qvoxel.y * cell;
+      const float rz = qz - qvoxel.z * cell;
+      for (std::size_t s = 0; s < kMaxNeighbors; ++s) {
+        // We iterate over every neighbor of the voxel and bail out early if
+        // - span is invalid (contains no points), or
+        // - the minimum distance from the point to the voxel is greater than epsilon
+        const std::size_t span_idx = neighbors[s];
         if (span_idx == INVALID_SPAN) {
           continue;
         }
+        const NeighborOffset &off = kNeighborOffsets[s];
+        if (off.filterable) {
+          const float gx =
+              (off.dx == 0) ? 0.f : (off.dx > 0) ? (cell - rx) : rx;
+          const float gy =
+              (off.dy == 0) ? 0.f : (off.dy > 0) ? (cell - ry) : ry;
+          const float gz =
+              (off.dz == 0) ? 0.f : (off.dz > 0) ? (cell - rz) : rz;
+          if (gx * gx + gy * gy + gz * gz > eps2) {
+            continue;
+          }
+        }
         const VoxelSpan &span = cloud_index.voxel_spans[span_idx];
         for (size_t nidx = span.start; nidx < span.start + span.len; nidx++) {
+          // The span may contain interesting points, so we have to check every 
+          // non-visited and enqueue core points
           if (!visited[nidx] &&
-              cloud_index.are_within(point_index, nidx, eps2)) {
+              cloud_index.are_within(qx, qy, qz, nidx, eps2)) {
             visited[nidx] = 1;
             labels[nidx] = cluster_label;
             if (is_core[nidx]) {

@@ -27,6 +27,37 @@ inline constexpr std::size_t kMaxNeighbors = 27;
 /// set to \c INVALID_SPAN.
 using NeighborList = std::array<std::size_t, kMaxNeighbors>;
 
+/// Signed voxel offset (dx, dy, dz) for one slot in a \c NeighborList.
+/// Slots are populated in the order: dz ∈ {-1,0,+1} outer,
+/// dy ∈ {-1,0,+1} middle, dx ∈ {-1,0,+1} inner.
+///
+/// \c filterable is \c true when manhattan distance to voxel is >= 2.
+/// Only these can ever have min-distance > epsilon,
+/// so the voxel pre-filter should only be applied when this flag is set.
+/// Face neighbors (|dx|+|dy|+|dz| == 1) and the self-voxel (all zero) always
+/// have min-distance <= epsilon and must never be skipped.
+struct NeighborOffset {
+  int8_t dx, dy, dz;
+  bool filterable; ///< true iff this slot is an edge or corner neighbor.
+};
+
+/// Compile-time table of \c NeighborOffset for every slot in a \c NeighborList,
+/// in the same order that \c build_voxel_neighbor_lut populates them.
+inline constexpr std::array<NeighborOffset, kMaxNeighbors> kNeighborOffsets =
+    []() constexpr {
+      std::array<NeighborOffset, kMaxNeighbors> o{};
+      std::size_t i = 0;
+      for (int dz = -1; dz <= 1; ++dz)
+        for (int dy = -1; dy <= 1; ++dy)
+          for (int dx = -1; dx <= 1; ++dx) {
+            const int manhattan = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy) +
+                                  (dz < 0 ? -dz : dz);
+            o[i++] = {static_cast<int8_t>(dx), static_cast<int8_t>(dy),
+                      static_cast<int8_t>(dz), manhattan >= 2};
+          }
+      return o;
+    }();
+
 /// Sentinel index indicating that a neighbor voxel does not exist in the index.
 inline constexpr std::size_t INVALID_SPAN =
     std::numeric_limits<std::size_t>::max();
@@ -52,6 +83,7 @@ public:
   std::vector<VoxelSpan> voxel_spans;           ///< All occupied voxels in Morton order.
   std::vector<NeighborList> voxel_neighbor_lut; ///< 27-entry neighbor table per voxel.
   std::vector<std::size_t> point_to_voxel;      ///< Maps sorted-point index → voxel index.
+  float voxel_size = 0.0f; ///< Actual quantization cell width, slightly larger than epsilon.
 
   /// Builds the spatial index from \p cloud using \p epsilon as the voxel
   /// side length.
@@ -62,17 +94,20 @@ public:
   /// \p a and \p b is at most \c sqrt(eps_squared).
   [[nodiscard]] inline bool are_within(std::size_t a, std::size_t b,
                                        float eps_squared) const {
-    auto ax = sorted_cloud.vx[a];
-    auto ay = sorted_cloud.vy[a];
-    auto az = sorted_cloud.vz[a];
+    return are_within(sorted_cloud.vx[a], sorted_cloud.vy[a],
+                      sorted_cloud.vz[a], b, eps_squared);
+  }
 
-    auto bx = sorted_cloud.vx[b];
-    auto by = sorted_cloud.vy[b];
-    auto bz = sorted_cloud.vz[b];
-
-    auto dx = ax - bx;
-    auto dy = ay - by;
-    auto dz = az - bz;
+  /// Returns \c true if the Euclidean distance between the point at
+  /// (\p ax, \p ay, \p az) and sorted-cloud point \p b is at most
+  /// \c sqrt(eps_squared).  Use this overload when the caller has already
+  /// loaded the query-point coordinates to avoid redundant memory accesses.
+  [[nodiscard]] inline bool are_within(float ax, float ay, float az,
+                                       std::size_t b,
+                                       float eps_squared) const {
+    auto dx = ax - sorted_cloud.vx[b];
+    auto dy = ay - sorted_cloud.vy[b];
+    auto dz = az - sorted_cloud.vz[b];
 
     return (dx * dx + dy * dy + dz * dz) <= eps_squared;
   }

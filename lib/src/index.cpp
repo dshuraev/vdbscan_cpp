@@ -261,6 +261,7 @@ Index::Index(const vdbscan::PointCloud &cloud, float epsilon) {
 
   if (len == 0) {
     sorted_cloud = PointCloud(len);
+    voxel_size = epsilon;
     return;
   }
 
@@ -269,6 +270,7 @@ Index::Index(const vdbscan::PointCloud &cloud, float epsilon) {
   // are exactly epsilon apart from landing in adjacent voxels when they should
   // share one.
   const float inv = std::nextafter(1.0f / epsilon, 0.0f);
+  voxel_size = 1.0f / inv;
 
   // Step 1: Voxelize — quantize each axis into integer voxel coordinates.
   auto qx = std::vector<int32_t>(len);
