@@ -1,8 +1,13 @@
 version: 3
 
 vars:
-  TOOLCHAIN: '{{default "clang" .TOOLCHAIN}}'
-  KITTI_STRIDE: '{{default "1" .KITTI_STRIDE}}'
+  TOOLCHAIN:     '{{default "clang" .TOOLCHAIN}}'
+  CXX:           '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
+  CC:            '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
+  GCOV_EXEC:     '{{if eq .TOOLCHAIN "clang"}}llvm-cov gcov{{else}}gcov{{end}}'
+  COV_DIR:       build/{{.TOOLCHAIN}}-test-coverage
+  KITTI_STRIDE:  '{{default "1" .KITTI_STRIDE}}'
+  SYNTHETIC_DIR: ./.cache/synthetic-data
 
 tasks:
   # ── Library ────────────────────────────────────────────────────────────────
@@ -30,7 +35,6 @@ tasks:
       vars: [KITTI_PATH]
     vars:
       KITTI_MAX_FILES: '{{default "0" .KITTI_MAX_FILES}}'
-      KITTI_STRIDE: '{{default "1" .KITTI_STRIDE}}'
     cmds:
       - >-
         cmake -S . -B build/{{.TOOLCHAIN}}-bench-kitti-release -G Ninja
@@ -49,9 +53,6 @@ tasks:
 
   test:run:
     desc: Build and run unit tests (Debug, no coverage)
-    vars:
-      CXX: '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
-      CC:  '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
     cmds:
       - >-
         cmake -S . -B build/{{.TOOLCHAIN}}-test -G Ninja
@@ -63,6 +64,26 @@ tasks:
       - cmake --build build/{{.TOOLCHAIN}}-test --target vdbscan_tests -j
       - cd build/{{.TOOLCHAIN}}-test && ctest --output-on-failure
 
+  test:synthetic:run:
+    desc: Generate synthetic data (if needed) then run integration tests against it
+    deps: [gen:synthetic]
+    cmds:
+      - >-
+        cmake -S . -B build/{{.TOOLCHAIN}}-synth-test -G Ninja
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_CXX_COMPILER={{.CXX}}
+        -DCMAKE_C_COMPILER={{.CC}}
+        -DVDBSCAN_BUILD_CLI=OFF
+        -DVDBSCAN_TEST=ON
+        -DVDBSCAN_TEST_SYNTHETIC=ON
+        -DSYNTHETIC_DIR={{.SYNTHETIC_DIR}}
+      - cmake --build build/{{.TOOLCHAIN}}-synth-test -j
+      - cd build/{{.TOOLCHAIN}}-synth-test && ctest --output-on-failure -R "Synthetic PLY"
+
+  test:all:run:
+    desc: Build and run all tests — unit (Debug) and synthetic integration (Release)
+    deps: [test:run, test:synthetic:run]
+
   # Generates line and branch coverage HTML + text summary under
   # build/<toolchain>-test-coverage/coverage/.
   # Requires gcovr (pip install gcovr).
@@ -70,11 +91,6 @@ tasks:
 
   test:coverage:
     desc: Build and run tests with line+branch coverage reports
-    vars:
-      CXX:       '{{if eq .TOOLCHAIN "clang"}}clang++{{else}}g++{{end}}'
-      CC:        '{{if eq .TOOLCHAIN "clang"}}clang{{else}}gcc{{end}}'
-      GCOV_EXEC: '{{if eq .TOOLCHAIN "clang"}}llvm-cov gcov{{else}}gcov{{end}}'
-      COV_DIR:   build/{{.TOOLCHAIN}}-test-coverage
     cmds:
       - >-
         cmake -S . -B {{.COV_DIR}} -G Ninja
@@ -100,7 +116,17 @@ tasks:
 
   # ── Utilities ──────────────────────────────────────────────────────────────
 
-  clean:
-    desc: Remove all build directories
+  gen:synthetic:
+    desc: Generate synthetic point cloud data
+    vars:
+      CONFIGS:
+        sh: find ./scripts/config/synthetic_data -type f -name '*.json'
     cmds:
-      - rm -rf build/
+      - mkdir -p {{.SYNTHETIC_DIR}}
+      - for: {var: CONFIGS}
+        cmd: uv run --project ./scripts python ./scripts/synthetic-data.py {{.ITEM}} -o {{.SYNTHETIC_DIR}}
+
+  clean:
+    desc: Remove all build artifacts and generated data cache
+    cmds:
+      - rm -rf build/ .cache/

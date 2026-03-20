@@ -6,7 +6,8 @@ General-purpose DBSCAN point-cloud clustering accelerated by Morton-order voxel 
 
 - `CMake >= 3.20`
 - C++ compiler supporting C++17
-- `gcovr` for `test:coverage`
+- [`uv`](https://docs.astral.sh/uv/) for `test:all:run` and synthetic targets.
+- `gcov` or `llvm-cov gcov` for `test:coverage` depending on toolchain
 
 ## Building
 
@@ -25,6 +26,7 @@ task --list
 - [x] CLI
 - [x] Benchmarks
 - [x] Unit tests
+- [x] Testing on synthetic data (oracle [sklearn.cluster.DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html))
 - [ ] Fuzzing
 - [ ] Perf traces
 

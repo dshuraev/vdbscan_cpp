@@ -1,0 +1,38 @@
+{
+  "id": "medium_torus_tubes_eps025_minpts10",
+  "seed": 256,
+  "dbscan": {
+    "eps": 0.25,
+    "min_pts": 10
+  },
+  "cluster_distance": [4.0, 9.0],
+  "clusters": [
+    {
+      "type": "torus",
+      "n_clusters": 2,
+      "points_per_cluster": [100, 150],
+      "major_radius": [0.8, 1.3],
+      "aspect_ratio": [2.5, 4.0]
+    },
+    {
+      "type": "tube",
+      "n_clusters": 3,
+      "points_per_cluster": [80, 110],
+      "length": [2.5, 4.0],
+      "radius": [0.05, 0.12]
+    },
+    {
+      "type": "gaussian",
+      "n_clusters": 2,
+      "points_per_cluster": [50, 80],
+      "std": [0.15, 0.25]
+    }
+  ],
+  "noise": [
+    {
+      "type": "boundary",
+      "ratio": 0.06,
+      "distance_from_cluster": [1.0, 2.0]
+    }
+  ]
+}

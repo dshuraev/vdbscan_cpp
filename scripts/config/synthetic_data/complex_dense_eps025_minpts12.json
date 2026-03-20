@@ -1,0 +1,49 @@
+{
+  "id": "complex_dense_eps025_minpts12",
+  "seed": 555,
+  "dbscan": {
+    "eps": 0.25,
+    "min_pts": 12
+  },
+  "cluster_distance": [4.0, 8.0],
+  "clusters": [
+    {
+      "type": "gaussian",
+      "n_clusters": 4,
+      "points_per_cluster": [70, 110],
+      "std": [0.15, 0.25]
+    },
+    {
+      "type": "ball",
+      "n_clusters": 3,
+      "points_per_cluster": [80, 120],
+      "radius": [0.5, 0.9]
+    },
+    {
+      "type": "cylinder",
+      "n_clusters": 3,
+      "points_per_cluster": [80, 120],
+      "radius": [0.4, 0.6],
+      "height": [2.0, 3.0]
+    },
+    {
+      "type": "box",
+      "n_clusters": 2,
+      "points_per_cluster": [120, 170],
+      "width": [2.0, 3.5],
+      "height": [2.0, 3.0],
+      "depth": [1.5, 2.5]
+    }
+  ],
+  "noise": [
+    {
+      "type": "uniform",
+      "ratio": 0.12
+    },
+    {
+      "type": "boundary",
+      "ratio": 0.08,
+      "distance_from_cluster": [1.0, 2.0]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[project]
+name = "vdbscan_cpp-scripts"
+version = "0.1.0"
+description = "Scripts for generating synthetic data"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "plyfile>=1.1.3",
+    "pydantic>=2.12.5",
+    "rich>=14.3.3",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.1",
+    "typer>=0.24.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.7",
+]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "B008",   # typer.Argument / typer.Option in function defaults is the intended pattern
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["synthetic_data"]

@@ -1,0 +1,23 @@
+{
+  "id": "simple_gaussians_eps035_minpts8",
+  "seed": 42,
+  "dbscan": {
+    "eps": 0.35,
+    "min_pts": 8
+  },
+  "cluster_distance": [4.0, 9.0],
+  "clusters": [
+    {
+      "type": "gaussian",
+      "n_clusters": 5,
+      "points_per_cluster": [50, 90],
+      "std": [0.20, 0.35]
+    }
+  ],
+  "noise": [
+    {
+      "type": "uniform",
+      "ratio": 0.08
+    }
+  ]
+}
