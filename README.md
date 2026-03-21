@@ -22,6 +22,7 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
   - [Testing](#testing)
     - [Benchmarking on KITTI data](#benchmarking-on-kitti-data)
   - [Performance](#performance)
+  - [Complexity](#complexity)
     - [KITTI Benchmarks](#kitti-benchmarks)
     - [Traces](#traces)
   - [Roadmap](#roadmap)
@@ -29,15 +30,14 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
 
 ## Overview
 
-`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries from $O(n)$ to $O(1)$.
+`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries (see [Complexity](#complexity)).
 
-**Key properties**:
+**Components**:
 
-- Expected **O(n)** time complexity for uniform and clustered data
-- Automatic **noise labelling** — no need to know the number of clusters upfront
-- Configurable via two intuitive parameters: neighborhood radius `epsilon` and `min_pts`
-- Clean C++17 library API + standalone CLI tool
-- CLI: Accepts **.xyz**, **.ply**, and **.bin** (KITTI) point-cloud formats
+- C++17 library
+- Standalone CLI for **.xyz**, **.ply**, and **.bin** (KITTI) point-cloud formats
+- Performance benchmarks and tracing (required KITTI dataset)
+- Unit tests and tests on synthetic data vs oracle ([sklearn.cluster.DBSCAN](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html))
 
 ## Theory
 
@@ -220,7 +220,19 @@ sources fetched by CMake; run it once if `tracy-capture` is not already on `PATH
 
 ## Performance
 
-The index construction is O(n) (radix sort dominates in practice) and neighborhood queries are O(1) per point, giving **O(n) overall** for clustered or uniform data.
+## Complexity
+
+For number of points $n$ and number of voxels $m$.
+
+- Index construction: $O(n + m\log m)$
+  - Radix sort: $O(n)$
+  - Neighbor LUT: $O(m\log m)$
+- DBSCAN: $O(n\cdot k(\varepsilon))$
+  - Core point search: $O(n)$ with $O(n\cdot k(\varepsilon))$ worst-case when needs to scan all points in neighborhood
+  - BFS and Clustering: $O(n\cdot k(\varepsilon))$
+
+where $k(\varepsilon)\sim \rho V_{3\times 3\times 3}\approx 27\varepsilon^3 \rho \Rightarrow k(\varepsilon) =\Theta(\rho \varepsilon^3)$ is expected number of candidate points examined per neighborhood query given average point density $\rho$.
+In practice as LIDAR points are not uniformly distributed and `vdbscan` uses several optimizations such early return during core point search and voxel pruning during BFS that bring down $k(\varepsilon)$.
 
 Memory layout choices that help throughput:
 
