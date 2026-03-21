@@ -228,7 +228,7 @@ For number of points $n$ and number of voxels $m$.
   - Radix sort: $O(n)$
   - Neighbor LUT: $O(m\log m)$
 - DBSCAN: $O(n\cdot k(\varepsilon))$
-  - Core point search: $O(n)$ with $O(n\cdot k(\varepsilon))$ worst-case when needs to scan all points in neighborhood
+  - Core point search: $O(n)$ best case, $O(n\cdot k(\varepsilon))$ worst-case when needs to scan all points in neighborhood
   - BFS and Clustering: $O(n\cdot k(\varepsilon))$
 
 where $k(\varepsilon)\sim \rho V_{3\times 3\times 3}\approx 27\varepsilon^3 \rho \Rightarrow k(\varepsilon) =\Theta(\rho \varepsilon^3)$ is expected number of candidate points examined per neighborhood query given average point density $\rho$.
