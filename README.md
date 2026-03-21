@@ -29,7 +29,7 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
 
 ## Overview
 
-`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries from O(n) to O(1).
+`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries from $O(n)$ to $O(1)$.
 
 **Key properties**:
 
@@ -235,7 +235,7 @@ Profiler zones (visible in Tracy or flame graphs) map directly to the five index
 Performance was benchmarked on 2011/09/26 KITTI velodyne point set with 108 files,
 each file 1.9-2MB corresponding to ~120k points per file.
 
-Performance is seed to degrade with increased values of epsilon, which corresponds
+Performance degrades with increased values of epsilon, which corresponds
 to larger sphere around the point that has to be searched.
 
 ```txt
