@@ -51,7 +51,7 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
 
 Clusters grow by recursively expanding from core points to all density-reachable neighbors. Unlike k-means, DBSCAN discovers clusters of arbitrary shape and marks outliers explicitly — both very desirable properties for real-world sensor data.
 
-The naive implementation checks every pair of points, giving $O(n^2)$ time. A spatial index reduces the neighborhood query to $O(\log n)$ (k-d tree) or $O(1)$ expected (hash-based), making the overall algorithm $O(n \log n)$ or $O(n)$.
+The naive implementation checks every pair of points, giving $O(n^2)$ time. In theory, spatial index reduces the neighborhood query to $O(\log n)$ (k-d tree) or $O(1)$ expected (hash-based), making the overall algorithm $O(n \log n)$ or $O(n)$.
 
 ### Voxel-Morton Acceleration
 
