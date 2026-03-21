@@ -46,13 +46,13 @@ Every cluster will be assigned its own color. Noise is grey `(128,128,128)`.
     {
       "type": "gaussian", // cluster generator type: isotropic gaussian cloud
       "n_clusters": 3, // number of clusters for this generator
-      "points_per_cluster": 30, // number of points in the cluster: INTEGER or [MIN, MAX]
+      "density_factor": 2.0, // alpha: ratio of expected neighbors to min_pts. FLOAT or [MIN, MAX]
       "std": [0.15, 0.35] // standard deviation: FLOAT or [MIN, MAX]
     },
     {
       "type": "crescent",
       "n_clusters": 2,
-      "points_per_cluster": 70,
+      "density_factor": 2.0,
       "radius": [1.0, 1.6],
       "thickness": [0.08, 0.18],
       "arc_fraction": [0.4, 0.7] // how much of an circle, 1 = full circle
@@ -60,34 +60,34 @@ Every cluster will be assigned its own color. Noise is grey `(128,128,128)`.
     {
       "type": "torus",
       "n_clusters": 2,
-      "points_per_cluster": [120, 220],
+      "density_factor": 2.0,
       "major_radius": [0.8, 1.5],
       "aspect_ratio": 2.5 // Ratio R/r, with major radius R (center of tube to center of torus) and minor radius r (tube radius)
     },
     {
       "type": "tube", // solid
       "n_clusters": 2,
-      "points_per_cluster": [60, 140],
+      "density_factor": 2.0,
       "length": [1.5, 4.0],
       "radius": [0.03, 0.12]
     },
     {
       "type": "cylinder", // solid, uniform point distribution
       "n_clusters": 2,
-      "points_per_cluster": [80, 160],
+      "density_factor": 2.0,
       "radius": [0.4, 0.9],
       "height": [0.1, 0.5]
     },
     {
       "type": "ball", // solid, uniform point distribution
       "n_clusters": 2,
-      "points_per_cluster": [80, 160],
+      "density_factor": 2.0,
       "radius": [0.4, 0.9]
     },
     {
       "type": "box",
       "n_clusters": 1,
-      "points_per_cluster": 40,
+      "density_factor": 2.0,
       "width": 8.5,
       "height": 4.3,
       "depth": 2.1
@@ -114,7 +114,7 @@ so `"height": 1.2` means $\text{height}:=1.2*\varepsilon$.
 Every `clusters` also supports optional:
 
 - `"rotation": [w, x, y, z]`: rotation indicated by quaternions, as well as `"rotation": "none"` and `"rotation": "random"` (default)
-- `"density_factor": FLOAT | [MIN, MAX]`: expressing parameter $\alpha$ of cluster density (see below). Default is 2.
+- `"density_factor": FLOAT | [MIN, MAX]`: expressing parameter $\alpha$ of cluster density (see below). Default is `2.0`.
 
 ### Cluster Density
 
@@ -168,11 +168,32 @@ Cluster volume is defined in relation to $\varepsilon$: `"height": 1.2` implies
 $\text{height}:=1.2\varepsilon$. This is made to allow easier reasoning about the
 size of clusters when varying $\varepsilon$.
 
-Number of points in cluster is
+The number of points per cluster is computed automatically from the cluster geometry
+and `density_factor`:
 
 ```math
-N \approx V\frac{\alpha K}{\frac{4}{3}\pi\varepsilon^3}
+N = \left\lfloor V\frac{\alpha K}{\frac{4}{3}\pi\varepsilon^3} \right\rceil
 ```
+
+where $V$ is the cluster volume derived from its geometric parameters (all scaled by $\varepsilon$).
+The volume formula used per generator type:
+
+| type       | effective volume $V$                                   |
+|------------|--------------------------------------------------------|
+| `gaussian` | $(2\pi)^{3/2}\sigma^3\varepsilon^3$                    |
+| `crescent` | $f\pi^2 R\frac{t^2}{2}\varepsilon^3$                   |
+| `torus`    | $2\pi^2 R\left(\frac{R}{a}\right)^2\varepsilon^3$      |
+| `tube`     | $\pi r^2 L\,\varepsilon^3$                             |
+| `cylinder` | $\pi r^2 h\,\varepsilon^3$                             |
+| `ball`     | $\frac{4}{3}\pi r^3\varepsilon^3$                      |
+| `box`      | $w\cdot h\cdot d\,\varepsilon^3$                       |
+
+($\sigma$=std, $R$=major\_radius, $t$=thickness, $f$=arc\_fraction, $a$=aspect\_ratio,
+$r$=radius, $L$=length, $h$=height, $d$=depth — all in $\varepsilon$ units.)
+
+When a cluster is smaller than one $\varepsilon$-ball ($V < \frac{4}{3}\pi\varepsilon^3$),
+its effective volume is clamped to $\frac{4}{3}\pi\varepsilon^3$, so compact clusters always
+receive at least $\lceil\alpha K\rceil$ points — the minimum useful to DBSCAN.
 
 It is important to note that if a cluster is _too small_, there may not be enough
 points within $\varepsilon$ for a cluster to be considered a true cluster even with

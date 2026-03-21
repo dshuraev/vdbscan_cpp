@@ -40,8 +40,8 @@ def create_generator(config: ClusterConfig) -> ClusterGenerator:
     Returns
     -------
     ClusterGenerator
-        A generator whose ``generate(n_points, eps, rng)`` method produces
-        points in local space (centered at origin, in world units).
+        A generator whose ``generate(density_factor, min_pts, eps, rng)`` method
+        produces points in local space (centered at origin, in world units).
     """
     match config:
         case GaussianClusterConfig():

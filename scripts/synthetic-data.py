@@ -43,7 +43,7 @@ from synthetic_data.models import SceneConfig
 from synthetic_data.noise import generate_all_noise
 from synthetic_data.placement import place_cluster_centers
 from synthetic_data.ply_writer import write_ply
-from synthetic_data.utils import sample_int
+from synthetic_data.utils import sample_float
 
 console = Console(stderr=False)
 err_console = Console(stderr=True)
@@ -82,9 +82,9 @@ def _step2_generate_cluster_points(
         generator = create_generator(cluster_group_cfg)
 
         for _c_idx in range(cluster_group_cfg.n_clusters):
-            n_pts = sample_int(cluster_group_cfg.points_per_cluster, rng)
+            density_factor = sample_float(cluster_group_cfg.density_factor, rng)
 
-            local_pts = generator.generate(n_pts, config.dbscan.eps, rng)
+            local_pts = generator.generate(density_factor, config.dbscan.min_pts, config.dbscan.eps, rng)
             rotated   = apply_rotation(local_pts, cluster_group_cfg.rotation, rng)
 
             local_groups.append(rotated)

@@ -26,11 +26,16 @@ class CylinderGenerator(ClusterGenerator):
         self.radius = radius
         self.height = height
 
-    def generate(self, n_points: int, eps: float, rng: Generator) -> np.ndarray:
+    def generate(self, density_factor: float, min_pts: int, eps: float, rng: Generator) -> np.ndarray:
+        import math
         radius_eps = sample_float(self.radius, rng)
         height_eps = sample_float(self.height, rng)
 
         self._warn_small_dimension("height", height_eps)
+
+        # Volume of cylinder: π r² h  (in ε³ units)
+        volume_eps = math.pi * radius_eps ** 2 * height_eps
+        n_points = self._compute_n_points(volume_eps, density_factor, min_pts)
 
         radius_w = radius_eps * eps
         height_w = height_eps * eps

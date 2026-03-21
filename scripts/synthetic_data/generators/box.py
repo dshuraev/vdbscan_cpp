@@ -32,7 +32,7 @@ class BoxGenerator(ClusterGenerator):
         self.height = height
         self.depth = depth
 
-    def generate(self, n_points: int, eps: float, rng: Generator) -> np.ndarray:
+    def generate(self, density_factor: float, min_pts: int, eps: float, rng: Generator) -> np.ndarray:
         width_eps  = sample_float(self.width, rng)
         height_eps = sample_float(self.height, rng)
         depth_eps  = sample_float(self.depth, rng)
@@ -40,6 +40,10 @@ class BoxGenerator(ClusterGenerator):
         self._warn_small_dimension("width",  width_eps)
         self._warn_small_dimension("height", height_eps)
         self._warn_small_dimension("depth",  depth_eps)
+
+        # Volume of box: w × h × d  (in ε³ units)
+        volume_eps = width_eps * height_eps * depth_eps
+        n_points = self._compute_n_points(volume_eps, density_factor, min_pts)
 
         w = width_eps  * eps
         h = height_eps * eps

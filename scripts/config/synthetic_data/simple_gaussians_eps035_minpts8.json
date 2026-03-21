@@ -10,7 +10,7 @@
     {
       "type": "gaussian",
       "n_clusters": 5,
-      "points_per_cluster": [50, 90],
+      "density_factor": 2.0,
       "std": [0.20, 0.35]
     }
   ],

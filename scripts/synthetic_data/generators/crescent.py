@@ -37,12 +37,17 @@ class CrescentGenerator(ClusterGenerator):
         self.thickness = thickness
         self.arc_fraction = arc_fraction
 
-    def generate(self, n_points: int, eps: float, rng: Generator) -> np.ndarray:
+    def generate(self, density_factor: float, min_pts: int, eps: float, rng: Generator) -> np.ndarray:
+        import math
         radius_eps = sample_float(self.radius, rng)
         thickness_eps = sample_float(self.thickness, rng)
         arc_fraction = sample_float(self.arc_fraction, rng)
 
         self._warn_small_dimension("thickness", thickness_eps)
+
+        # Volume: arc_fraction × 2π × radius × π × (thickness/2)²  (all in ε units)
+        volume_eps = arc_fraction * math.pi ** 2 * radius_eps * thickness_eps ** 2 / 2.0
+        n_points = self._compute_n_points(volume_eps, density_factor, min_pts)
 
         radius_w = radius_eps * eps
         tube_radius = (thickness_eps * eps) / 2.0

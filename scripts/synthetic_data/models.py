@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 # A scalar means a fixed value; a 2-element list means sample from [min, max].
 
 FloatOrRange = float | list[float]   # e.g. 0.35  or  [0.15, 0.35]
-IntOrRange = int | list[int]         # e.g. 30    or  [20, 60]
 
 # Quaternion [w, x, y, z], or the strings "none" / "random"
 RotationSpec = Literal["none", "random"] | list[float]
@@ -32,9 +31,7 @@ class DbscanConfig(BaseModel):
 class _BaseClusterConfig(BaseModel):
     type: str
     n_clusters: int
-    points_per_cluster: IntOrRange
     rotation: RotationSpec = "random"
-    # alpha — informational, documents intended density relative to DBSCAN threshold
     density_factor: FloatOrRange = 2.0
 
 

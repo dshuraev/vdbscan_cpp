@@ -21,10 +21,15 @@ class BallGenerator(ClusterGenerator):
     def __init__(self, radius: FloatOrRange) -> None:
         self.radius = radius
 
-    def generate(self, n_points: int, eps: float, rng: Generator) -> np.ndarray:
+    def generate(self, density_factor: float, min_pts: int, eps: float, rng: Generator) -> np.ndarray:
+        import math
         radius_eps = sample_float(self.radius, rng)
 
         self._warn_small_dimension("radius", radius_eps)
+
+        # Volume of sphere: (4/3)π r³  (in ε³ units)
+        volume_eps = (4.0 * math.pi / 3.0) * radius_eps ** 3
+        n_points = self._compute_n_points(volume_eps, density_factor, min_pts)
 
         radius_w = radius_eps * eps
 

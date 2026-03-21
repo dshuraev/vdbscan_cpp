@@ -26,11 +26,16 @@ class TubeGenerator(ClusterGenerator):
         self.length = length
         self.radius = radius
 
-    def generate(self, n_points: int, eps: float, rng: Generator) -> np.ndarray:
+    def generate(self, density_factor: float, min_pts: int, eps: float, rng: Generator) -> np.ndarray:
+        import math
         length_eps = sample_float(self.length, rng)
         radius_eps = sample_float(self.radius, rng)
 
         self._warn_small_dimension("length", length_eps)
+
+        # Volume of cylinder: π r² L  (in ε³ units)
+        volume_eps = math.pi * radius_eps ** 2 * length_eps
+        n_points = self._compute_n_points(volume_eps, density_factor, min_pts)
 
         length_w = length_eps * eps
         radius_w = radius_eps * eps
