@@ -66,7 +66,7 @@ Each point's floating-point coordinates are snapped to integer voxel indices. Be
 
 **4. Run-length encoding** — Consecutive points with equal Morton codes are compressed into `VoxelSpan` records (`start`, `count`). This produces one compact entry per occupied voxel.
 
-**5. 3x3x3 neighbor lookup table (LUT)** — For every occupied voxel, the 26 neighboring voxels (plus itself) are located via binary search on the Morton-sorted span list and stored in a fixed-size 27-element array. This one-time $O(n)$ construction amortizes all future neighborhood queries.
+**5. 3x3x3 neighbor lookup table (LUT)** — For every occupied voxel, the 26 neighboring voxels (plus itself) are located via binary search on the Morton-sorted span list and stored in a fixed-size 27-element array. This one-time $O(n+m\log m)$ ($m$ is number of occupied voxels) construction amortizes all future neighborhood queries.
 
 At query time, finding all $\varepsilon$-neighbors of a point costs exactly **27 span lookups** — constant time regardless of dataset size. Distance checks are then performed only within the (small) candidate set, and the structure-of-arrays memory layout enables SIMD vectorization of the inner distance loop.
 
