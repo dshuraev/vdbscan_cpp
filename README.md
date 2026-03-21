@@ -22,24 +22,22 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
   - [Testing](#testing)
     - [Benchmarking on KITTI data](#benchmarking-on-kitti-data)
   - [Performance](#performance)
+    - [KITTI Benchmarks](#kitti-benchmarks)
+    - [Traces](#traces)
   - [Roadmap](#roadmap)
   - [License](#license)
 
----
-
 ## Overview
 
-`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries from O(n) to O(1). On typical LiDAR data (KITTI autonomous-driving scans) it sustains throughput in the tens of millions of points per second.
+`vdbscan_cpp` clusters 3D point clouds using the DBSCAN algorithm with a spatial index that reduces per-point neighborhood queries from O(n) to O(1).
 
 **Key properties**:
 
 - Expected **O(n)** time complexity for uniform and clustered data
 - Automatic **noise labelling** — no need to know the number of clusters upfront
 - Configurable via two intuitive parameters: neighborhood radius `epsilon` and `min_pts`
-- Accepts **.xyz**, **.ply**, and **.bin** (KITTI) point-cloud formats
 - Clean C++17 library API + standalone CLI tool
-
----
+- CLI: Accepts **.xyz**, **.ply**, and **.bin** (KITTI) point-cloud formats
 
 ## Theory
 
@@ -53,25 +51,24 @@ High-performance DBSCAN point-cloud clustering for C++17, accelerated by a Morto
 
 Clusters grow by recursively expanding from core points to all density-reachable neighbors. Unlike k-means, DBSCAN discovers clusters of arbitrary shape and marks outliers explicitly — both very desirable properties for real-world sensor data.
 
-The naive implementation checks every pair of points, giving O(n²) time. A spatial index reduces the neighborhood query to O(log n) (k-d tree) or O(1) expected (hash-based), making the overall algorithm O(n log n) or O(n).
+The naive implementation checks every pair of points, giving $O(n^2)$ time. A spatial index reduces the neighborhood query to $O(\log n)$ (k-d tree) or $O(1)$ expected (hash-based), making the overall algorithm $O(n \log n)$ or $O(n)$.
 
 ### Voxel-Morton Acceleration
 
 This library uses a custom spatial index built in five passes:
 
-**1. Quantization** — The 3D space is divided into a regular grid of cubic voxels with side length `epsilon`. Each point's floating-point coordinates are snapped to integer voxel indices. Because the voxel side equals `epsilon`, any two points in the same or adjacent voxels are candidates for the ε-neighborhood; points two or more voxels apart are guaranteed to be farther than `epsilon`.
+**1. Quantization** — The 3D space is divided into a regular grid of cubic voxels with side length $\varepsilon^+\approx\varepsilon + \delta, 0\lt\delta\ll 1$ (implementation detail, provides convergence when fuzzing).
+Each point's floating-point coordinates are snapped to integer voxel indices. Because the voxel side equals $\varepsilon$, any two points in the same or adjacent voxels are candidates for the $\varepsilon$-neighborhood; points two or more voxels apart are guaranteed to be farther than $\varepsilon$.
 
-**2. Morton encoding** — Each voxel's (x, y, z) integer coordinates are interleaved bitwise into a single 64-bit [Morton code](https://en.wikipedia.org/wiki/Z-order_curve) (Z-order curve). Morton codes have the property that spatially close voxels produce numerically close codes, so sorting by Morton code groups nearby voxels together in memory.
+**2. Morton encoding** — Each voxel's $(x, y, z)$ integer coordinates are interleaved bitwise into a single 64-bit [Morton code](https://en.wikipedia.org/wiki/Z-order_curve) (Z-order curve). Morton codes have the property that spatially close voxels produce numerically close codes, so sorting by Morton code groups nearby voxels together in memory.
 
-**3. Radix sort** — All points are sorted by their Morton code in O(n) time using an 8-bit radix sort (8 passes). After sorting, points belonging to the same voxel are contiguous.
+**3. Radix sort** — All points are sorted by their Morton code in $O(n)$ time using an 8-bit radix sort (8 passes). After sorting, points belonging to the same voxel are contiguous.
 
 **4. Run-length encoding** — Consecutive points with equal Morton codes are compressed into `VoxelSpan` records (`start`, `count`). This produces one compact entry per occupied voxel.
 
-**5. 3x3x3 neighbor lookup table (LUT)** — For every occupied voxel, the 26 neighboring voxels (plus itself) are located via binary search on the Morton-sorted span list and stored in a fixed-size 27-element array. This one-time O(n) construction amortizes all future neighborhood queries.
+**5. 3x3x3 neighbor lookup table (LUT)** — For every occupied voxel, the 26 neighboring voxels (plus itself) are located via binary search on the Morton-sorted span list and stored in a fixed-size 27-element array. This one-time $O(n)$ construction amortizes all future neighborhood queries.
 
 At query time, finding all $\varepsilon$-neighbors of a point costs exactly **27 span lookups** — constant time regardless of dataset size. Distance checks are then performed only within the (small) candidate set, and the structure-of-arrays memory layout enables SIMD vectorization of the inner distance loop.
-
----
 
 ## Requirements
 
@@ -118,6 +115,7 @@ task build:cli:release TOOLCHAIN=gcc
 
 ```cpp
 #include <vdbscan/vdbscan.hpp>
+using namespace vdbscan;
 
 // Build a point cloud
 PointCloud cloud;
@@ -137,6 +135,8 @@ Clustering result = dbscan(cloud, epsilon, min_pts);
 `PointCloud` stores coordinates in a structure-of-arrays layout (`vx`, `vy`, `vz`) for cache and SIMD efficiency.
 
 ### CLI
+
+Located at `build/{TOOLCHAIN}/cli/vdbscan_cli`.
 
 ```text
 vdbscan_cli -i <input> -o <output> -e <epsilon> -m <min_pts>
@@ -172,8 +172,6 @@ vdbscan_cli -i scan.bin -o clusters/ -e 0.75 -m 4
 # ASCII input/output
 vdbscan_cli -i scan.xyz -o result.xyz -e 0.25 -m 6
 ```
-
----
 
 ## Testing
 
@@ -231,6 +229,55 @@ Memory layout choices that help throughput:
 - 27-element neighbor LUT avoids any per-query allocations
 
 Profiler zones (visible in Tracy or flame graphs) map directly to the five index-construction passes and the two DBSCAN phases, making it straightforward to identify bottlenecks on your specific data.
+
+### KITTI Benchmarks
+
+Performance was benchmarked on 2011/09/26 KITTI velodyne point set with 108 files,
+each file 1.9-2MB corresponding to ~120k points per file.
+
+Performance is seed to degrade with increased values of epsilon, which corresponds
+to larger sphere around the point that has to be searched.
+
+```txt
+task: [bench:kitti:run] ./build/clang/benches/kitti/vdbscan_bench_kitti
+Running ./build/clang/benches/kitti/vdbscan_bench_kitti
+Run on (12 X 5281.82 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x6)
+  L1 Instruction 32 KiB (x6)
+  L2 Unified 512 KiB (x6)
+  L3 Unified 32768 KiB (x1)
+```
+
+| Epsilon | Min points | Dots/s     | CPU Time      |
+| ------- | ---------- | ---------- | ------------- |
+| 0.5     | 4          | 2.02843M/s | 6497059774 ns |
+| 0.75    | 4          | 1.45539M/s | 9055225332 ns |
+| 1.00    | 4          | 1.06122M/s | 1.2419e+10 ns |
+
+Performance also degrades on very dense datasets: a dataset combining to 10 frames
+from KITTI dataset by overlaying them, amounting to 1.2M points,
+yielded throughput of 449.57k points/s for $\varepsilon=0.5, \text{minpts}=4$.
+
+### Traces
+
+TLDR: Time of building index is significant only for smaller $\varepsilon$;
+neighborhood queries dominate time.
+
+Tracing was done with the following settings: $(\varepsilon=0.5,\text{minpts}=4)$,
+$(\varepsilon=1.0,\text{minpts}=4)$ and $(\varepsilon=0.5,\text{minpts}=10)$.
+
+Depending on $\varepsilon$ the fraction of time spent in each profiled zone shifts,
+however most of the time (60-70%) is consistently spent in checking neighboring
+points during BFS.
+
+The second most taxing region is core point detection which sits at around 10%
+regardless on chosen $\varepsilon$ and only significantly increases with $\text{minpts}$
+(jump from ~10% to 15%).
+
+Building of `Index` is significant only for smaller $\varepsilon$, amounting to
+~15% for $\varepsilon=0.5$, while sharply declining for larger values to ~3% for
+$\varepsilon=1.0$.
 
 ## Roadmap
 
